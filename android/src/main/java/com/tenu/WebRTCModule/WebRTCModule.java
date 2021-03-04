@@ -805,7 +805,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
                 callback.invoke(false, "Plan-B mode does not allow AddTrack");
                 Log.e(TAG, "Plan-B mode does not allow AddTrack");
                 return;
-            }            
+            }
         } else {
             callback.invoke(false, "pco == null");
             Log.e(TAG, "peerConnectionAddTrack() failed");
@@ -1361,6 +1361,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
                     direction = this.parseDirection(directionRaw);
                 }
             }
+
             if (map.hasKey("streamIds")) {
                 ReadableArray rawStreamIds = map.getArray("streamIds");
                 if (rawStreamIds != null) {
@@ -1593,7 +1594,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
     public void peerConnectionSenderGetParameters(int id, String senderId, final Callback callback) {
         // 궁금증: 다 Async해야할까?
         ThreadUtils.runOnExecutor(() ->
-            this.peerConnectionSenderGetParametersAsync(id, senderId, callback));
+                this.peerConnectionSenderGetParametersAsync(id, senderId, callback));
     }
 
     private void peerConnectionSenderGetParametersAsync(int id, String senderId, final Callback callback) {
@@ -1608,10 +1609,10 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
             }
             if(rtpSender == null){
                 Log.d(TAG, "peerConnectionSenderGetParameters() rtpSender is null");
-                callback.invoke(false, "rtpSender is null");                   
+                callback.invoke(false, "rtpSender is null");
                 return;
             }
-            
+
             /* 다 만들었었는데 실수로 날림...커밋을 잘 하자. */
             RtpParameters params = rtpSender.getParameters();
             WritableMap res = Arguments.createMap();

@@ -161,7 +161,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
 
     addTransceiver(source: 'audio' | 'video' | MediaStreamTrack, init) {//TODO: FLAG: 2꺼 다시 보고 FIX하기
         return new Promise((resolve, reject) => {
-
+            console.log('RTCPeerConnection: addTransceiver');
             let src;
             if (source === 'audio') {
                 src = {type: 'audio'};
@@ -176,9 +176,11 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 init: {...init}
             }, (successful, data) => {
                 if (successful) {
+                    console.log('RTCPeerConnection: addTransceiver Successful');
                     this._mergeState(data.state);
                     resolve(this._transceivers.find((v) => v.id === data.id));
                 } else {
+                    console.log('RTCPeerConnection: addTransceiver Rejecting');
                     reject(data);
                 }
             });
@@ -187,7 +189,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
 
     // FLAG: 추가함.
     addTrackV1(track: MediaStreamTrack) {// Version 1
-        return new Promise((resolve, reject) => { 
+        return new Promise((resolve, reject) => {
             console.log("Add Track Called", track.kind);
             let sender = this._senders.find((sender) => (sender.track && sender.track().id === track.id));
             if (sender !== undefined) {
@@ -220,7 +222,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
             if(this.isClosed){
                 reject('InvalidStateError: PC is Closed');
             }
-            
+
             // 2. track을 더해줄 transceiver를 찾는다.
             const transceivers = this.getTransceivers();
             const existing = transceivers.find((t) => (t.sender.track == null && t.kind === track.kind));
@@ -230,7 +232,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                         const trackInfo = {
                             id: data.track.id,
                             kind: data.track.kind,
-                            label: data.track.kind, 
+                            label: data.track.kind,
                             enabled: data.track.enabled,
                             readyState: data.track.readyState,
                             remote: data.track.remote,
@@ -254,7 +256,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
         });
     }
 
-    //FLAG: 추가한 코드. Version2 
+    //FLAG: 추가한 코드. Version2
     removeTrack(sender: RTCRtpSender) {
         return new Promise((resolve, reject) => {
             const theSender = this.getTransceivers().find(t => t.sender === sender);
@@ -430,14 +432,14 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
 
     _getTransceiver(state): RTCRtpTransceiver {
         const existing = this._transceivers.find((t) => t.id === state.id);
-        console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-        console.log(state.id);
+        // console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        // console.log(state.id);
         if (existing) {
-            console.log('EE');
+            // console.log('EE');
             existing._updateState(state);
             return existing;
         } else {
-            console.log('NN');
+            // console.log('NN');
             let res = new RTCRtpTransceiver(this._peerConnectionId, state, (s) => this._mergeState(s));
             this._transceivers.push(res);
             return res;
@@ -484,7 +486,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 if (ev.iceConnectionState === 'closed') {
                     // This PeerConnection is done, clean up event handlers.
                     this._unregisterEvents();
-                    
+
                 }
             }),
             EventEmitter.addListener('peerConnectionStateChanged', ev => {
@@ -506,13 +508,16 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 this.dispatchEvent(new RTCEvent('signalingstatechange'));
             }),
             EventEmitter.addListener('peerConnectionAddedTrack', ev => {
+                // console.warn('peerConnectionAddedTrack event listened');
                 if (ev.id !== this._peerConnectionId) {
+                    // console.warn('ev.id !== this._peerConnectionId', ev.id, this._peerConnectionId);
                     return;
                 }
-                ev.id = ev.trackId;
-                delete ev.trackId;
-                const track = new MediaStreamTrack(ev);
-                this.dispatchEvent(new MediaStreamTrackEvent('track', {track}));
+                ev.id = ev.track.trackId;
+                delete ev.track.trackId; // 이부분 뭔가 이상쓰~
+                console.log(ev.track);
+                const track = new MediaStreamTrack(ev.track);
+                this.dispatchEvent(new MediaStreamTrackEvent('track', {...ev, track:track}));
             }),
             EventEmitter.addListener('peerConnectionAddedStream', ev => {
                 if (ev.id !== this._peerConnectionId) {
