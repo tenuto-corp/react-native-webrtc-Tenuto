@@ -543,7 +543,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
             EventEmitter.addListener('mediaStreamTrackMuteChanged', ev => {
                 if (ev.peerConnectionId !== this._peerConnectionId) {
                     return;
-                }
+               }
                 const track = this._getTrack(ev.streamReactTag, ev.trackId);
                 if (track) {
                     track.muted = ev.muted;
