@@ -81,11 +81,11 @@ export default class MediaStream extends EventTarget(MEDIA_STREAM_EVENTS) {
                 this._tracks.push(new MediaStreamTrack(trackInfo));
             }
         } else {
-            if(arg.streamId){
+            if(!arg.streamId){
                 console.warn("In MediaStream, arg.streamId error");
-            } if(arg.streamReactTag){
+            } if(!arg.streamReactTag){
                 console.warn("In MediaStream, arg.streamReactTag error");
-            }  if(arg.tracks){
+            }  if(!arg.tracks){
                 console.warn("In MediaStream, arg.tracks error");
             }
             throw new TypeError(`invalid type: ${typeof arg}`);

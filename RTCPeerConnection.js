@@ -517,7 +517,9 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 delete ev.track.trackId; // 이부분 뭔가 이상쓰~
                 console.log(ev.track);
                 const track = new MediaStreamTrack(ev.track);
-                this.dispatchEvent(new MediaStreamTrackEvent('track', {...ev, track:track}));
+                let stream1 = ev.streams[0];
+                const stream = new MediaStream(stream1);
+                this.dispatchEvent(new MediaStreamTrackEvent('track', {...ev, track:track, streams: [stream]}));
             }),
             EventEmitter.addListener('peerConnectionAddedStream', ev => {
                 if (ev.id !== this._peerConnectionId) {
@@ -538,6 +540,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                         this._remoteStreams.splice(index, 1);
                     }
                 }
+                console.log('in RTCPeerConnection, removedStream: ', stream);
                 this.dispatchEvent(new MediaStreamEvent('removestream', {stream}));
             }),
             EventEmitter.addListener('mediaStreamTrackMuteChanged', ev => {
