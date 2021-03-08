@@ -515,17 +515,18 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 }
                 ev.id = ev.track.trackId;
                 delete ev.track.trackId; // 이부분 뭔가 이상쓰~
-                console.log(ev.track);
                 const track = new MediaStreamTrack(ev.track);
                 let stream1 = ev.streams[0];
+                console.log('stream1: ', JSON.stringify(stream1));
                 const stream = new MediaStream(stream1);
-                this.dispatchEvent(new MediaStreamTrackEvent('track', {...ev, track:track, streams: [stream]}));
+                this.dispatchEvent(new MediaStreamTrackEvent('track', {track:track, streams: [stream]}));
             }),
             EventEmitter.addListener('peerConnectionAddedStream', ev => {
                 if (ev.id !== this._peerConnectionId) {
                     return;
                 }
                 const stream = new MediaStream(ev);
+                console.log('in RTCPeerConnection, addedStream: ', stream)
                 this._remoteStreams.push(stream);
                 this.dispatchEvent(new MediaStreamEvent('addstream', {stream}));
             }),
@@ -533,14 +534,15 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 if (ev.id !== this._peerConnectionId) {
                     return;
                 }
-                const stream = this._remoteStreams.find(s => s._reactTag === ev.streamId);
+                console.log('in RTCPeerConnection, removedStream: ID', ev.streamId);
+                const stream = this._remoteStreams.find(s => s.id === ev.streamId);
                 if (stream) {
                     const index = this._remoteStreams.indexOf(stream);
                     if (index !== -1) {
                         this._remoteStreams.splice(index, 1);
                     }
                 }
-                console.log('in RTCPeerConnection, removedStream: ', stream);
+                console.log('in RTCPeerConnection, removedStream: RES', stream);
                 this.dispatchEvent(new MediaStreamEvent('removestream', {stream}));
             }),
             EventEmitter.addListener('mediaStreamTrackMuteChanged', ev => {

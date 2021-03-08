@@ -362,17 +362,19 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         Log.d(TAG, "onAddStream Called");
         String streamReactTag = null;
         String streamId = mediaStream.getId();
+
         // The native WebRTC implementation has a special concept of a default
         // MediaStream instance with the label default that the implementation
         // reuses.
-        if ("default".equals(streamId)) {
-            for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
-                if (e.getValue().equals(mediaStream)) {
-                    streamReactTag = e.getKey();
-                    break;
-                }
+//        if ("default".equals(streamId)) {
+        for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
+            if (e.getValue().equals(mediaStream)) {
+                streamReactTag = e.getKey();
+                break;
             }
         }
+//        }
+
 
         if (streamReactTag == null) {
             streamReactTag = UUID.randomUUID().toString();
@@ -445,7 +447,8 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
         WritableMap params = Arguments.createMap();
         params.putInt("id", id);
-        params.putString("streamId", streamReactTag);
+        params.putString("streamReactTag", streamReactTag);
+        params.putString("streamId", mediaStream.getId());
         webRTCModule.sendEvent("peerConnectionRemovedStream", params);
     }
 
@@ -536,7 +539,6 @@ class PeerConnectionObserver implements PeerConnection.Observer {
             WritableMap trackInfo = mediaTrackToMap(receiver.track());
             params.putMap("track", trackInfo);
             params.putMap("receiver", rtpReceiverToMap(receiver));
-
 
 
 //            MediaStreamTrack track = receiver.track();
@@ -740,9 +742,9 @@ class PeerConnectionObserver implements PeerConnection.Observer {
     @Nullable
     private WritableMap mediaTrackToMap(MediaStreamTrack track) {
         WritableMap trackInfo = Arguments.createMap();
-        if(track != null) {
+        if (track != null) {
             trackInfo.putString("id", track.id());
-            trackInfo.putString("label", track.getClass() == VideoTrack.class? "video": "audio");
+            trackInfo.putString("label", track.getClass() == VideoTrack.class ? "video" : "audio");
             trackInfo.putString("kind", track.kind());
             trackInfo.putBoolean("enabled", track.enabled());
             trackInfo.putString("readyState", track.state().toString());
@@ -751,7 +753,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
     }
 
     @Nullable
-    private WritableMap rtpReceiverToMap(RtpReceiver receiver){
+    private WritableMap rtpReceiverToMap(RtpReceiver receiver) {
         // TODO:
         WritableMap info = Arguments.createMap();
         info.putString("receiverId", receiver.id());
