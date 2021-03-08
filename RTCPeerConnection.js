@@ -161,7 +161,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
 
     addTransceiver(source: 'audio' | 'video' | MediaStreamTrack, init) {//TODO: FLAG: 2꺼 다시 보고 FIX하기
         return new Promise((resolve, reject) => {
-            console.log('RTCPeerConnection: addTransceiver');
+            // console.log('RTCPeerConnection: addTransceiver');
             let src;
             if (source === 'audio') {
                 src = {type: 'audio'};
@@ -176,11 +176,11 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 init: {...init}
             }, (successful, data) => {
                 if (successful) {
-                    console.log('RTCPeerConnection: addTransceiver Successful');
+                    // console.log('RTCPeerConnection: addTransceiver Successful');
                     this._mergeState(data.state);
                     resolve(this._transceivers.find((v) => v.id === data.id));
                 } else {
-                    console.log('RTCPeerConnection: addTransceiver Rejecting');
+                    // console.log('RTCPeerConnection: addTransceiver Rejecting');
                     reject(data);
                 }
             });
@@ -190,7 +190,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
     // FLAG: 추가함.
     addTrackV1(track: MediaStreamTrack) {// Version 1
         return new Promise((resolve, reject) => {
-            console.log("Add Track Called", track.kind);
+            // console.log("Add Track Called", track.kind);
             let sender = this._senders.find((sender) => (sender.track && sender.track().id === track.id));
             if (sender !== undefined) {
                 return;
@@ -249,7 +249,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                     }
                 });
             }else{
-                console.log("NOT EXISTING");
+                // console.log("NOT EXISTING");
                 reject("No Transceiver exists");
                 // 다른 라이브러리에서는 자동으로 이걸 추가해주기도 하는 것 같다. 하지만 일단 TenuClient에서는 addTransceiver를 하고 나서 동작하기 때문에! 이럴 일이 없을 것..
             }
@@ -517,7 +517,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 delete ev.track.trackId; // 이부분 뭔가 이상쓰~
                 const track = new MediaStreamTrack(ev.track);
                 let stream1 = ev.streams[0];
-                console.log('stream1: ', JSON.stringify(stream1));
+                // console.log('stream1: ', JSON.stringify(stream1));
                 const stream = new MediaStream(stream1);
                 this.dispatchEvent(new MediaStreamTrackEvent('track', {track:track, streams: [stream]}));
             }),
@@ -526,7 +526,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                     return;
                 }
                 const stream = new MediaStream(ev);
-                console.log('in RTCPeerConnection, addedStream: ', stream)
+                // console.log('in RTCPeerConnection, addedStream: ', stream)
                 this._remoteStreams.push(stream);
                 this.dispatchEvent(new MediaStreamEvent('addstream', {stream}));
             }),
@@ -534,7 +534,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                 if (ev.id !== this._peerConnectionId) {
                     return;
                 }
-                console.log('in RTCPeerConnection, removedStream: ID', ev.streamId);
+                // console.log('in RTCPeerConnection, removedStream: ID', ev.streamId);
                 const stream = this._remoteStreams.find(s => s.id === ev.streamId);
                 if (stream) {
                     const index = this._remoteStreams.indexOf(stream);
@@ -542,7 +542,7 @@ export default class RTCPeerConnection extends EventTarget(PEER_CONNECTION_EVENT
                         this._remoteStreams.splice(index, 1);
                     }
                 }
-                console.log('in RTCPeerConnection, removedStream: RES', stream);
+                // console.log('in RTCPeerConnection, removedStream: RES', stream);
                 this.dispatchEvent(new MediaStreamEvent('removestream', {stream}));
             }),
             EventEmitter.addListener('mediaStreamTrackMuteChanged', ev => {
