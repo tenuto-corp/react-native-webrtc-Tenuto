@@ -5,9 +5,7 @@
 //  Copyright © 2015 One. All rights reserved.
 //
 
-#if !TARGET_OS_OSX
 #import <UIKit/UIKit.h>
-#endif
 
 #import <React/RCTBridge.h>
 #import <React/RCTEventDispatcher.h>
@@ -91,21 +89,6 @@
     }
   }
   return stream;
-}
-
-- (RTCMediaStreamTrack*)trackForId:(NSString*)trackId
-{
-  RTCMediaStreamTrack *track = _localTracks[trackId];
-  if (!track) {
-    for (NSNumber *peerConnectionId in _peerConnections) {
-      RTCPeerConnection *peerConnection = _peerConnections[peerConnectionId];
-      track = peerConnection.remoteTracks[trackId];
-      if (track) {
-        break;
-      }
-    }
-  }
-  return track;
 }
 
 RCT_EXPORT_MODULE();

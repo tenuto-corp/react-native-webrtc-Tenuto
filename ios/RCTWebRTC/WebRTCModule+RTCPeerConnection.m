@@ -17,9 +17,8 @@
 #import <WebRTC/RTCIceServer.h>
 #import <WebRTC/RTCMediaConstraints.h>
 #import <WebRTC/RTCIceCandidate.h>
+#import <WebRTC/RTCLegacyStatsReport.h>
 #import <WebRTC/RTCSessionDescription.h>
-#import <WebRTC/RTCRtpTransceiver.h>
-#import <WebRTC/RTCStatisticsReport.h>
 
 #import "WebRTCModule.h"
 #import "WebRTCModule+RTCDataChannel.h"
@@ -141,113 +140,6 @@ RCT_EXPORT_METHOD(peerConnectionRemoveStream:(nonnull NSString *)streamID object
   [peerConnection removeStream:stream];
 }
 
-RCT_EXPORT_METHOD(peerConnectionAddTransceiver:(nonnull NSNumber *)objectID
-                                       options:(NSDictionary *)options
-                                      callback:(RCTResponseSenderBlock)callback)
-{
-    RTCPeerConnection *peerConnection = self.peerConnections[objectID];
-    if (!peerConnection) {
-      return;
-    }
-    
-    RTCRtpTransceiverInit *init = [RTCRtpTransceiverInit new];
-    init.direction = RTCRtpTransceiverDirectionSendRecv;
-    if ([options objectForKey:@"init"] != nil) {
-        NSDictionary* initOpt = [options objectForKey:options];
-        if ([initOpt objectForKey:@"direction"] != nil) {
-            init.direction = [self parseDirection: [initOpt objectForKey:@"direction"]];
-        }
-        if ([initOpt objectForKey:@"streamIds"] != nil) {
-            init.streamIds = [initOpt objectForKey: @"streamIds"];
-        }
-    }
-    
-    RTCRtpTransceiver *transceiver;
-    if ([options objectForKey:@"type"] != nil) {
-        NSString* type = [options objectForKey:@"type"];
-        if ([type isEqualToString:@"audio"]) {
-            transceiver = [peerConnection addTransceiverOfType: RTCRtpMediaTypeAudio init: init];
-        } else if ([type isEqualToString:@"video"]) {
-            transceiver = [peerConnection addTransceiverOfType: RTCRtpMediaTypeVideo init: init];
-        } else {
-            return;
-        }
-    } else if ([options objectForKey:@"trackId"]) {
-        RTCMediaStreamTrack* track = [self trackForId:[options objectForKey:@"trackId"]];
-        transceiver = [peerConnection addTransceiverWithTrack:track init:init];
-    } else {
-        return;
-    }
-    [self applyTransceivers: peerConnection];
-    id response = @{
-      @"id": transceiver.sender.senderId,
-      @"state": [self extractPeerConnectionState: peerConnection]
-    };
-    callback(@[@(YES), response]);
-}
-
-RCT_EXPORT_METHOD(peerConnectionTransceiverSetDirection:(nonnull NSNumber *)objectID
-                                  transceiverId:(NSString *)transceiverId
-                                      direction: (NSString* )direction
-                                       callback:(RCTResponseSenderBlock)callback) {
-   RTCPeerConnection *peerConnection = self.peerConnections[objectID];
-   if (!peerConnection) {
-     return;
-   }
-   for (RTCRtpTransceiver *transceiver in peerConnection.transceivers) {
-       if ([transceiver.sender.senderId isEqualToString:transceiverId]) {
-           [transceiver setDirection:[self parseDirection:direction]];
-       }
-   }
-    id response = @{
-      @"id": transceiverId,
-      @"state": [self extractPeerConnectionState: peerConnection]
-    };
-    callback(@[@(YES), response]);
-}
-
-RCT_EXPORT_METHOD(peerConnectionTransceiverReplaceTrack:(nonnull NSNumber *)objectID
-                                  transceiverId:(NSString *)transceiverId
-                                        trackId: (NSString* )trackId
-                                       callback:(RCTResponseSenderBlock)callback) {
-   RTCPeerConnection *peerConnection = self.peerConnections[objectID];
-   if (!peerConnection) {
-     return;
-   }
-   for (RTCRtpTransceiver *transceiver in peerConnection.transceivers) {
-       if ([transceiver.sender.senderId isEqualToString:transceiverId]) {
-           if (trackId == nil) {
-               [transceiver.sender setTrack:nil];
-           } else {
-               [transceiver.sender setTrack:[self trackForId:trackId]];
-           }
-       }
-   }
-    id response = @{
-      @"id": transceiverId,
-      @"state": [self extractPeerConnectionState: peerConnection]
-    };
-    callback(@[@(YES), response]);
-}
-
-RCT_EXPORT_METHOD(peerConnectionTransceiverStop:(nonnull NSNumber *)objectID
-                                  transceiverId:(NSString *)transceiverId
-                                       callback:(RCTResponseSenderBlock)callback) {
-   RTCPeerConnection *peerConnection = self.peerConnections[objectID];
-   if (!peerConnection) {
-     return;
-   }
-   for (RTCRtpTransceiver *transceiver in peerConnection.transceivers) {
-       if ([transceiver.sender.senderId isEqualToString:transceiverId]) {
-           [transceiver stop];
-       }
-   }
-    id response = @{
-      @"id": transceiverId,
-      @"state": [self extractPeerConnectionState: peerConnection]
-    };
-    callback(@[@(YES), response]);
-}
 
 RCT_EXPORT_METHOD(peerConnectionCreateOffer:(nonnull NSNumber *)objectID
                                     options:(NSDictionary *)options
@@ -274,22 +166,17 @@ RCT_EXPORT_METHOD(peerConnectionCreateOffer:(nonnull NSNumber *)objectID
             }
           ]);
         } else {
-          [self applyTransceivers: peerConnection];
           NSString *type = [RTCSessionDescription stringForType:sdp.type];
-          id response = @{
-            @"state": [self extractPeerConnectionState: peerConnection],
-            @"session":  @{@"sdp": sdp.sdp, @"type": type}
-          };
-          callback(@[@(YES), response]);
+          callback(@[@(YES), @{@"sdp": sdp.sdp, @"type": type}]);
         }
       }];
 }
 
-RCT_EXPORT_METHOD(peerConnectionCreateAnswer:(nonnull NSNumber *)peerConnectionId
+RCT_EXPORT_METHOD(peerConnectionCreateAnswer:(nonnull NSNumber *)objectID
                                      options:(NSDictionary *)options
                                     callback:(RCTResponseSenderBlock)callback)
 {
-  RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
+  RTCPeerConnection *peerConnection = self.peerConnections[objectID];
   if (!peerConnection) {
     return;
   }
@@ -310,13 +197,8 @@ RCT_EXPORT_METHOD(peerConnectionCreateAnswer:(nonnull NSNumber *)peerConnectionI
              }
            ]);
          } else {
-           [self applyTransceivers: peerConnection];
            NSString *type = [RTCSessionDescription stringForType:sdp.type];
-           id response = @{
-             @"state": [self extractPeerConnectionState: peerConnection],
-             @"session":  @{@"sdp": sdp.sdp, @"type": type}
-           };
-           callback(@[@(YES), response]);
+           callback(@[@(YES), @{@"sdp": sdp.sdp, @"type": type}]);
          }
        }];
 }
@@ -336,11 +218,7 @@ RCT_EXPORT_METHOD(peerConnectionSetLocalDescription:(RTCSessionDescription *)sdp
       };
       callback(@[@(NO), errorResponse]);
     } else {
-      [self applyTransceivers: peerConnection];
-      id response = @{
-        @"state": [self extractPeerConnectionState: peerConnection]
-      };
-      callback(@[@(YES), response]);
+      callback(@[@(YES)]);
     }
   }];
 }
@@ -360,11 +238,7 @@ RCT_EXPORT_METHOD(peerConnectionSetRemoteDescription:(RTCSessionDescription *)sd
       };
       callback(@[@(NO), errorResponse]);
     } else {
-      [self applyTransceivers: peerConnection];
-      id response = @{
-        @"state": [self extractPeerConnectionState: peerConnection]
-      };
-      callback(@[@(YES), response]);
+      callback(@[@(YES)]);
     }
   }];
 }
@@ -413,97 +287,89 @@ RCT_EXPORT_METHOD(peerConnectionClose:(nonnull NSNumber *)objectID)
   [dataChannels removeAllObjects];
 }
 
-RCT_EXPORT_METHOD(peerConnectionGetStats:(nonnull NSNumber *) objectID
-                                resolver:(RCTPromiseResolveBlock)resolve
-                                rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXPORT_METHOD(peerConnectionGetStats:(nonnull NSString *)trackID
+                                objectID:(nonnull NSNumber *)objectID
+                                callback:(RCTResponseSenderBlock)callback)
 {
   RTCPeerConnection *peerConnection = self.peerConnections[objectID];
   if (!peerConnection) {
-    reject(@"invalid_id", @"PeerConnection ID not found", nil);
+    callback(@[@(NO), @"PeerConnection ID not found"]);
     return;
   }
 
-  [peerConnection statisticsWithCompletionHandler:^(RTCStatisticsReport *report) {
-    resolve([self statsToJSON:report]);
-  }];
+  RTCMediaStreamTrack *track = nil;
+  if (!trackID
+      || !trackID.length
+      || (track = self.localTracks[trackID])
+      || (track = peerConnection.remoteTracks[trackID])) {
+    [peerConnection statsForTrack:track
+                 statsOutputLevel:RTCStatsOutputLevelStandard
+                completionHandler:^(NSArray<RTCLegacyStatsReport *> *stats) {
+                  callback(@[@(YES), [self statsToJSON:stats]]);
+                }];
+  } else {
+    callback(@[@(NO), @"Track not found"]);
+  }
 }
 
 /**
- * Constructs a JSON <tt>NSString</tt> representation of a specific
- * <tt>RTCStatisticsReport</tt>s.
+ * Constructs a JSON <tt>NSString</tt> representation of a specific array of
+ * <tt>RTCLegacyStatsReport</tt>s.
  * <p>
+ * On iOS it is faster to (1) construct a single JSON <tt>NSString</tt>
+ * representation of an array of <tt>RTCLegacyStatsReport</tt>s and (2) have it
+ * pass through the React Native bridge rather than the array of
+ * <tt>RTCLegacyStatsReport</tt>s.
  *
- * @param <tt>RTCStatisticsReport</tt>s
- * @return an <tt>NSString</tt> which represents the specified <tt>report</tt> in
+ * @param reports the array of <tt>RTCLegacyStatsReport</tt>s to represent in
+ * JSON format
+ * @return an <tt>NSString</tt> which represents the specified <tt>stats</tt> in
  * JSON format
  */
-- (NSString *)statsToJSON:(RTCStatisticsReport *)report
+- (NSString *)statsToJSON:(NSArray<RTCLegacyStatsReport *> *)reports
 {
-  /* 
-  The initial capacity matters, of course, because it determines how many
-  times the NSMutableString will have grow. But walking through the reports
-  to compute an initial capacity which exactly matches the requirements of
-  the reports is too much work without real-world bang here. An improvement
-  should be caching the required capacity from the previous invocation of the 
-  method and using it as the initial capacity in the next invocation. 
-  As I didn't want to go even through that,choosing just about any initial 
-  capacity is OK because NSMutableCopy doesn't have too bad a strategy of growing.
-  */
-  NSMutableString *s = [NSMutableString stringWithCapacity:16 * 1024];
+  // XXX The initial capacity matters, of course, because it determines how many
+  // times the NSMutableString will have grow. But walking through the reports
+  // to compute an initial capacity which exactly matches the requirements of
+  // the reports is too much work without real-world bang here. A better
+  // approach is what the Android counterpart does i.e. cache the
+  // NSMutableString and preferably with a Java-like soft reference. If that is
+  // too much work, then an improvement should be caching the required capacity
+  // from the previous invocation of the method and using it as the initial
+  // capacity in the next invocation. As I didn't want to go even through that,
+  // choosing just about any initial capacity is OK because NSMutableCopy
+  // doesn't have too bad a strategy of growing.
+  NSMutableString *s = [NSMutableString stringWithCapacity:8 * 1024];
 
   [s appendString:@"["];
   BOOL firstReport = YES;
-  for (NSString *key in report.statistics.allKeys) {
+  for (RTCLegacyStatsReport *report in reports) {
     if (firstReport) {
       firstReport = NO;
     } else {
       [s appendString:@","];
     }
-  
-    [s appendString:@"[\""];
-    [s appendString: key];
-    [s appendString:@"\",{"];
-
-    RTCStatistics *statistics = report.statistics[key];
-    [s appendString:@"\"timestamp\":"];
-    [s appendFormat:@"%f", statistics.timestamp_us / 1000.0];
-    [s appendString:@",\"type\":\""]; 
-    [s appendString:statistics.type];
-    [s appendString:@"\",\"id\":\""];
-    [s appendString:statistics.id];
-    [s appendString:@"\""];
-
-    for (id key in statistics.values) {
+    [s appendString:@"{\"id\":\""]; [s appendString:report.reportId];
+    [s appendString:@"\",\"type\":\""]; [s appendString:report.type];
+    [s appendString:@"\",\"timestamp\":"];
+    [s appendFormat:@"%f", report.timestamp];
+    [s appendString:@",\"values\":["];
+    __block BOOL firstValue = YES;
+    [report.values enumerateKeysAndObjectsUsingBlock:^(
+        NSString *key,
+        NSString *value,
+        BOOL *stop) {
+      if (firstValue) {
+        firstValue = NO;
+      } else {
         [s appendString:@","];
-        [s appendString:@"\""];
-        [s appendString:key];
-        [s appendString:@"\":"];
-        NSObject *statisticsValue = [statistics.values objectForKey:key];
-        if ([statisticsValue isKindOfClass:[NSArray class]]) {
-            [s appendString:@"["];
-            BOOL firstValue = YES;
-            for (NSObject *value in statisticsValue) {
-              if(firstValue) {
-                firstValue = NO;
-              } else {
-                [s appendString:@","];
-              }
-
-              [s appendString:@"\""];
-              [s appendString:[NSString stringWithFormat:@"%@", value]];
-              [s appendString:@"\""];
-            }
-            [s appendString:@"]"];
-        } else {
-            [s appendString:@"\""];
-            [s appendString:[NSString stringWithFormat:@"%@", statisticsValue]];
-            [s appendString:@"\""];
-        }
-    }
-    
-    [s appendString:@"}]"];
-  } 
-
+      }
+      [s appendString:@"{\""]; [s appendString:key];
+      [s appendString:@"\":\""]; [s appendString:value];
+      [s appendString:@"\"}"];
+    }];
+    [s appendString:@"]}"];
+  }
   [s appendString:@"]"];
 
   return s;
@@ -554,64 +420,6 @@ RCT_EXPORT_METHOD(peerConnectionGetStats:(nonnull NSNumber *) objectID
     case RTCSignalingStateClosed: return @"closed";
   }
   return nil;
-}
-
-- (NSString *)stringForTransceiverDirection:(RTCRtpTransceiverDirection)direction {
-    switch(direction) {
-        case RTCRtpTransceiverDirectionSendRecv: return @"sendrecv";
-        case RTCRtpTransceiverDirectionSendOnly: return @"sendonly";
-        case RTCRtpTransceiverDirectionRecvOnly: return @"recvonly";
-        case RTCRtpTransceiverDirectionInactive: return @"inactive";
-    }
-    return nil;
-}
-
-- (RTCRtpTransceiverDirection) parseDirection: (NSString*)direction {
-    if ([direction isEqualToString:@"sendrecv"]) {
-        return RTCRtpTransceiverDirectionSendRecv;
-    } else if ([direction isEqualToString:@"sendonly"]) {
-        return RTCRtpTransceiverDirectionSendOnly;
-    } else if ([direction isEqualToString:@"recvonly"]) {
-        return RTCRtpTransceiverDirectionRecvOnly;
-    } else if ([direction isEqualToString:@"inactive"]) {
-        return RTCRtpTransceiverDirectionInactive;
-    }
-    
-    return RTCRtpTransceiverDirectionSendRecv;
-}
-
-- (NSDictionary *)extractTransceiver:(RTCRtpTransceiver *)transceiver {
-    NSMutableDictionary *res = [NSMutableDictionary dictionary];
-    [res setValue: transceiver.sender.senderId forKey:@"id"];
-    if (transceiver.mid != nil) {
-        [res setValue: transceiver.mid forKey:@"mid"];
-    }
-    [res setValue:[self stringForTransceiverDirection: transceiver.direction] forKey:@"direction"];
-    [res setValue: (transceiver.isStopped ? @YES : @NO) forKey:@"isStopped"];
-    [res setValue:@{
-        @"id": transceiver.receiver.receiverId,
-        @"track": @{
-                @"id": transceiver.receiver.track.trackId,
-                @"kind": transceiver.receiver.track.kind,
-                @"label": transceiver.receiver.track.trackId,
-                @"enabled": @(transceiver.receiver.track.isEnabled),
-                @"remote": @(YES),
-                @"readyState": @"live"
-        }
-    } forKey: @"receiver"];
-    return res;
-}
-
-- (NSDictionary *)extractPeerConnectionState:(RTCPeerConnection *)peerConnection {
-    NSMutableDictionary *res = [NSMutableDictionary dictionary];
-    NSMutableArray *transceivers = [NSMutableArray array];
-    if (peerConnection.configuration.sdpSemantics == RTCSdpSemanticsUnifiedPlan) {
-        for (RTCRtpTransceiver *transceiver in peerConnection.transceivers) {
-            [transceivers addObject: [self extractTransceiver: transceiver]];
-        }
-    }
-    [res setValue:transceivers forKey:@"transceivers"];
-    return res;
 }
 
 #pragma mark - RTCPeerConnectionDelegate methods
@@ -739,27 +547,6 @@ RCT_EXPORT_METHOD(peerConnectionGetStats:(nonnull NSNumber *) objectID
 
 - (void)peerConnection:(nonnull RTCPeerConnection *)peerConnection didRemoveIceCandidates:(nonnull NSArray<RTCIceCandidate *> *)candidates {
   // TODO
-}
-
-- (void)applyTransceivers: (nonnull RTCPeerConnection *)peerConnection {
-    if (peerConnection.configuration.sdpSemantics == RTCSdpSemanticsUnifiedPlan) {
-        for (RTCRtpTransceiver *transceiver in peerConnection.transceivers) {
-            RTCMediaStreamTrack* track = transceiver.receiver.track;
-            if (track != nil) {
-                if (transceiver.mediaType == RTCRtpMediaTypeAudio) {
-                    if ([peerConnection.remoteTracks objectForKey:track.trackId] == nil) {
-                        peerConnection.remoteTracks[track.trackId] = track;
-                    }
-                } else if (transceiver.mediaType == RTCRtpMediaTypeVideo) {
-                    if ([peerConnection.remoteTracks objectForKey:track.trackId] == nil) {
-                        peerConnection.remoteTracks[track.trackId] = track;
-                        NSString *streamReactTag = [[NSUUID UUID] UUIDString];
-                        [peerConnection addVideoTrackAdapter:streamReactTag track: track];
-                    }
-                }
-            }
-        }
-    }
 }
 
 @end

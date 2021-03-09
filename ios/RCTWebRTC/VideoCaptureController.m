@@ -73,7 +73,7 @@
         = [self selectFormatForDevice:device
                       withTargetWidth:_width
                      withTargetHeight:_height];
-    if (format == nil) {
+    if (!format) {
         RCTLogWarn(@"[VideoCaptureController] No valid formats for device %@", device);
 
         return;
@@ -116,7 +116,6 @@
 
 -(void)switchCamera {
     _usingFrontCamera = !_usingFrontCamera;
-    _deviceId = NULL;
 
     [self startCapture];
 }

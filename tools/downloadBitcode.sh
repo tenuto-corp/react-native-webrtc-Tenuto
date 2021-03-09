@@ -9,10 +9,10 @@ WEBRTC_FILE="https://dl.bintray.com/webrtc-builds/webrtc-builds/${WEBRTC_BUILD}/
 
 THIS_DIR=$(cd -P "$(dirname "$(readlink "${BASH_SOURCE[0]}" || echo "${BASH_SOURCE[0]}")")" && pwd)
 
-pushd ${THIS_DIR}/../apple
+pushd ${THIS_DIR}/../ios
 
 # Cleanup
-rm -rf WebRTC.xcframework WebRTC.dSYMs
+rm -rf WebRTC.framework WebRTC.dSYM
 
 # Download
 echo "Downloading files..."

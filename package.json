@@ -26,11 +26,6 @@
   "scripts": {
     "postinstall": "cross-os darwin-extract"
   },
-  "cross-os": {
-    "darwin-extract": {
-      "darwin": "tar -zxf apple/WebRTC.xcframework.tgz -C apple"
-    }
-  },
   "bugs": {
     "url": "https://github.com/tenuto-corp/react-native-webrtc-tenuto"
   },

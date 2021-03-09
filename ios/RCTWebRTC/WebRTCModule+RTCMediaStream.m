@@ -123,21 +123,17 @@ RCT_EXPORT_METHOD(enumerateDevices:(RCTResponseSenderBlock)callback)
                                                                  mediaType:AVMediaTypeVideo
                                                                   position:AVCaptureDevicePositionUnspecified];
     for (AVCaptureDevice *device in videoevicesSession.devices) {
-        NSString *position = @"unknown";
+        NSString *position = @"";
         if (device.position == AVCaptureDevicePositionBack) {
             position = @"environment";
         } else if (device.position == AVCaptureDevicePositionFront) {
             position = @"front";
         }
-        NSString *label = @"Unknown video device";
-        if (device.localizedName != nil) {
-            label = device.localizedName;
-        }
         [devices addObject:@{
                              @"facing": position,
                              @"deviceId": device.uniqueID,
                              @"groupId": @"",
-                             @"label": label,
+                             @"label": device.localizedName,
                              @"kind": @"videoinput",
                              }];
     }
@@ -146,14 +142,10 @@ RCT_EXPORT_METHOD(enumerateDevices:(RCTResponseSenderBlock)callback)
                                                                  mediaType:AVMediaTypeAudio
                                                                   position:AVCaptureDevicePositionUnspecified];
     for (AVCaptureDevice *device in audioDevicesSession.devices) {
-        NSString *label = @"Unknown audio device";
-        if (device.localizedName != nil) {
-            label = device.localizedName;
-        }
         [devices addObject:@{
                              @"deviceId": device.uniqueID,
                              @"groupId": @"",
-                             @"label": label,
+                             @"label": device.localizedName,
                              @"kind": @"audioinput",
                              }];
     }
@@ -198,6 +190,15 @@ RCT_EXPORT_METHOD(mediaStreamRelease:(nonnull NSString *)streamID)
 {
   RTCMediaStream *stream = self.localStreams[streamID];
   if (stream) {
+    for (RTCVideoTrack *track in stream.videoTracks) {
+      track.isEnabled = NO;
+      [track.videoCaptureController stopCapture];
+      [self.localTracks removeObjectForKey:track.trackId];
+    }
+    for (RTCAudioTrack *track in stream.audioTracks) {
+      track.isEnabled = NO;
+      [self.localTracks removeObjectForKey:track.trackId];
+    }
     [self.localStreams removeObjectForKey:streamID];
   }
 }
@@ -234,6 +235,23 @@ RCT_EXPORT_METHOD(mediaStreamTrackSwitchCamera:(nonnull NSString *)trackID)
     RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
     [videoTrack.videoCaptureController switchCamera];
   }
+}
+
+#pragma mark - Helpers
+
+- (RTCMediaStreamTrack*)trackForId:(NSString*)trackId
+{
+  RTCMediaStreamTrack *track = self.localTracks[trackId];
+  if (!track) {
+    for (NSNumber *peerConnectionId in self.peerConnections) {
+      RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
+      track = peerConnection.remoteTracks[trackId];
+      if (track) {
+        break;
+      }
+    }
+  }
+  return track;
 }
 
 @end
