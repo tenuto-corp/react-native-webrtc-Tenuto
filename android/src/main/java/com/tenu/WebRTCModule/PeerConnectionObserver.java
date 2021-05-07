@@ -377,7 +377,8 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
 
         if (streamReactTag == null) {
-            streamReactTag = UUID.randomUUID().toString();
+            streamReactTag = streamId;
+//            streamReactTag = UUID.randomUUID().toString();
             remoteStreams.put(streamReactTag, mediaStream);
         }
 
@@ -697,7 +698,8 @@ class PeerConnectionObserver implements PeerConnection.Observer {
             }
         }
         if (streamReactTag == null) {
-            streamReactTag = UUID.randomUUID().toString();
+            streamReactTag = stream.getId();
+//            streamReactTag = UUID.randomUUID().toString();
             remoteStreams.put(streamReactTag, stream);
         }
         params.putString("streamReactTag", streamReactTag);

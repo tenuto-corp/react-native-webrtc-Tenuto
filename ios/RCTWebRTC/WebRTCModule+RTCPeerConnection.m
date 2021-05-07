@@ -889,7 +889,8 @@ RCT_EXPORT_METHOD(getTrackVolumes:(RCTResponseSenderBlock)callback)
             //1.2 그렇지않으면 streamId로 streamReactTag만들기 (근데 어차피 streamId랑 같게할거면 이게 필요한가)
             // - 내부적으로(native단에서) streamId를 백퍼센트 확실하게 UUID로 만드는지 검증할 필요가 있겠네.
             RCTLogTrace(@"didAddTrack, no streamReactTag");
-            streamReactTag = [[NSUUID UUID] UUIDString];
+            streamReactTag = stream.streamId;
+//             streamReactTag = [[NSUUID UUID] UUIDString];
             peerConnection.remoteStreams[streamReactTag] = stream;
         }else{ //1.1 존재하면 streamReactTag 가져오기
             RCTLogTrace(@"didAddTrack, yes streamReactTag");
